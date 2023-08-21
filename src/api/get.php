@@ -9,8 +9,8 @@ $resuestMethod =$_SERVER["REQUEST_METHOD"];
 
 if($resuestMethod == "GET"){
 
-    $studentList = getStudentList();
-    echo $studentList;
+    $student = getStudent();
+    echo $student;
 }
 else{
     //print error message
@@ -22,14 +22,14 @@ else{
     echo json_encode($data);
 }
 
-function getStudentList(){
+function getStudent(){
     global $conn ;
 
-    $query = "SELECT * FROM students";
+    $query = "SELECT * FROM students WHERE studentID=".$_GET['studentID'];
     //execute this query
     $query_run = mysqli_query($conn, $query);
-    
-    //check if record exist or not
+
+        //check if record exist or not
     if($query_run){
 
         if(mysqli_num_rows($query_run) > 0){
@@ -38,7 +38,7 @@ function getStudentList(){
 
             $data = [
                 'status' => 200,
-                'message'=> 'Student list fetched successsfully',
+                'message'=> 'Student fetched successsfully',
                 'data' => $response
             ];
             header("HTTP/1.0 200 Success");
@@ -47,9 +47,9 @@ function getStudentList(){
         }else{//no student records found
             $data = [
                 'status' => 404,
-                'message'=> 'No student found',
+                'message'=> 'No student found for given ID',
             ];
-            header("HTTP/1.0 404 No student found");
+            header("HTTP/1.0 404 No student found for given ID");
             return json_encode($data);
         }
     }
@@ -62,6 +62,6 @@ function getStudentList(){
         header("HTTP/1.0 500 Internal Server Error");
         return json_encode($data);
     }
-}
 
+}
 ?>
