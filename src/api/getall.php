@@ -5,9 +5,9 @@ header("Content-type: application/json");
 header('Access-Control-Allow-Method: GET');
 
 
-$resuestMethod =$_SERVER["REQUEST_METHOD"];
+$requestMethod =$_SERVER["REQUEST_METHOD"];
 
-if($resuestMethod == "GET"){
+if($requestMethod == "GET"){
 
     $studentList = getStudentList();
     echo $studentList;
@@ -16,7 +16,7 @@ else{
     //print error message
     $data = [
         'status' => 405,
-        'message'=> $resuestMethod .'Invalid request method',
+        'message'=> $requestMethod .'Invalid request method',
     ];
     header("HTTP/1.0 405 Method Not Allowed");
     echo json_encode($data);
