@@ -10,20 +10,20 @@ $requestMethod =$_SERVER["REQUEST_METHOD"];
 
 if($requestMethod == "GET"){
 
-    $student = getStudent();
+    $student = getStudent($_GET['studentID']);
     echo $student;
 }
 else{
     //print error message
     $data = [
         'status' => 405,
-        'message'=> $requestMethod .'Invalid request method',
+        'message'=> $requestMethod .' Invalid request method',
     ];
     header("HTTP/1.0 405 Method Not Allowed");
     echo json_encode($data);
 }
 
-function getStudent(){
+function getStudent($studentID){
     global $conn ;
 
     // Check if the student ID exists in the database
@@ -40,44 +40,39 @@ function getStudent(){
         header("HTTP/1.0 404 Not Found");
         return json_encode($errorData);
     }
+    else{
+        // Get all of the information for this specific student from the database
+        $query = "SELECT * FROM students WHERE studentID=".$_GET['studentID'];
+        //execute this query
+        $query_run = mysqli_query($conn, $query);
 
-    $query = "SELECT * FROM students WHERE studentID=".$_GET['studentID'];
-    //execute this query
-    $query_run = mysqli_query($conn, $query);
+            //check if record exist or not
+        if($query_run){
 
-        //check if record exist or not
-    if($query_run){
+            if(mysqli_num_rows($query_run) > 0){
 
-        if(mysqli_num_rows($query_run) > 0){
+                $response  = mysqli_fetch_all($query_run, MYSQLI_ASSOC);
 
-            $response  = mysqli_fetch_all($query_run, MYSQLI_ASSOC);
+                $data = [
+                    'status' => 200,
+                    'message'=> 'Student fetched successsfully',
+                    'data' => $response
+                ];
+                header("HTTP/1.0 200 Success");
+                return json_encode($data);
 
+            }
+        }
+        else{
+            //print error message
             $data = [
-                'status' => 200,
-                'message'=> 'Student fetched successsfully',
-                'data' => $response
+                'status' => 500,
+                'message'=> 'Internal Server Error',
             ];
-            header("HTTP/1.0 200 Success");
-            return json_encode($data);
-
-        }else{//no student records found
-            $data = [
-                'status' => 404,
-                'message'=> 'No student found for given ID',
-            ];
-            header("HTTP/1.0 404 No student found for given ID");
+            header("HTTP/1.0 500 Internal Server Error");
             return json_encode($data);
         }
-    }
-    else{
-        //print error message
-        $data = [
-            'status' => 500,
-            'message'=> 'Internal Server Error',
-        ];
-        header("HTTP/1.0 500 Internal Server Error");
-        return json_encode($data);
-    }
+   }
 
 }
 ?>
