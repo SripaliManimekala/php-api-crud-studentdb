@@ -6,20 +6,19 @@ header("Content-type: application/json");
 header('Access-Control-Allow-Method: PUT');
 
 
-$requestMethod =$_SERVER["REQUEST_METHOD"];
+$requestMethod = $_SERVER["REQUEST_METHOD"];
 
-if($requestMethod == "PUT"){
+if ($requestMethod == "PUT") {
     
-    $input_data= json_decode(file_get_contents("php://input"), true); 
+    $input_data = json_decode(file_get_contents("php://input"), true); 
     $updated_student = updateStudent($input_data, $_GET); 
     echo $updated_student;
              
-}
-else{
+} else {
     //print error message
     $data = [
         'status' => 405,
-        'message'=> $requestMethod .' Invalid request method',
+        'message' => $requestMethod .' Invalid request method',
     ];
     header("HTTP/1.0 405 Method Not Allowed");
     echo json_encode($data);
@@ -28,64 +27,66 @@ else{
 function updateStudent($student, $student_params){
     global $conn ;
 
-    if(!isset($student_params['studentID'])){
-        return inputValidationError('Studet ID not Found!');
+    if (!isset($student_params['studentID'])){
+        return inputValidationError('Student ID parameter not Found!');
+    } elseif ($student_params['studentID'] == null) {
+        return inputValidationError('Enter the student ID value'); 
     }
-    elseif($student_params['studentID']==null){
-        return inputValidationError('Enter the student ID'); 
-    }
-
+    
     $studentID = mysqli_real_escape_string($conn, $student_params['studentID']);
 
-    $FirstName = mysqli_real_escape_string($conn, $student['FirstName']);
-    $LastName = mysqli_real_escape_string($conn, $student['LastName']);
-    $DateofBirth = mysqli_real_escape_string($conn, $student['DateofBirth']);
-    $Address = mysqli_real_escape_string($conn, $student['Address']);
-    $Email = mysqli_real_escape_string($conn, $student['Email']);
+    // Check if the student ID exists in the database
+    $checkQuery = "SELECT COUNT(*) as count FROM students WHERE studentID = '$studentID'";
+    $checkResult = mysqli_query($conn, $checkQuery);
+    $checkRow = mysqli_fetch_assoc($checkResult);
 
-    //validate
-    //check all entries entered
-    if(empty(trim($FirstName))){
-        return inputValidationError('Enter first name field');
-    }
-    elseif(empty(trim($LastName))){
-        return inputValidationError('Enter last name field');
-    }
-    elseif(empty(trim($DateofBirth))){
-        return inputValidationError('Enter date of birth field');
-    }
-    elseif(empty(trim($Address))){
-        return inputValidationError('Enter address field');
-    }
-    elseif(empty(trim($Email))){
-        return inputValidationError('Enter email field');
-    }
-    else{
-        $query = "UPDATE students SET FirstName='$FirstName', LastName ='$LastName', DateofBirth ='$DateofBirth',Address ='$Address',Email =  '$Email' WHERE studentID = '$studentID' LIMIT 1 ";
+    if ($checkRow['count'] == 0) {
+        // If the student ID doesn't exist, return an error response
+        $errorData = [
+            'status' => 404, // Not Found
+            'message' => 'ID not found in database',
+        ];
+        header("HTTP/1.0 404 Not Found");
+        return json_encode($errorData);
+    } else {
+        // Validate empty fields
+        foreach ($student as $field => $value) {
+            if (empty(trim($value))) {
+                return inputValidationError('Empty fields Detected');
+            }
+        }
+
+        // Update the student record
+        $query = "UPDATE students SET ";
+        $fields = [];
+
+        foreach ($student as $field => $value) {
+            $sanitizedValue = mysqli_real_escape_string($conn, $value);
+            $fields[] = "$field = '$sanitizedValue'";
+        }
+
+        $query .= implode(", ", $fields);
+        $query .= " WHERE studentID = '$studentID' LIMIT 1";
+
         $query_run = mysqli_query($conn, $query);
-        if($query_run){
+
+        if ($query_run) {
+            // Fetch and return the updated student record
+            $getUpdatedRecordQuery = "SELECT * FROM students WHERE studentID = '$studentID'";
+            $updatedRecordResult = mysqli_query($conn, $getUpdatedRecordQuery);
+            $updatedRecord = mysqli_fetch_assoc($updatedRecordResult);
             
-            $responseData= array(
-                "student ID" =>$studentID,
-                "first Name" =>$FirstName ,
-                "last Name" => $LastName,
-                "date OfBirth" => $DateofBirth,
-                "address" =>$Address,
-                "email" =>$Email
-            );
-            echo json_encode($responseData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-            echo "\n";
             $data = [
                 'status' => 200,
-                'message'=> 'Student updated successfully',
+                'message' => 'Student updated successfully',
+                'updated_student' => $updatedRecord,
             ];
-            header("HTTP/1.0 200 updated successfully");
-            return json_encode($data);
-        }
-        else{
+            header("HTTP/1.0 200 Success");
+            return json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        } else {
             $data = [
                 'status' => 500,
-                'message'=> 'Internal Server Error',
+                'message' => 'Internal Server Error',
             ];
             header("HTTP/1.0 500 Internal Server Error");
             return json_encode($data);  
@@ -98,8 +99,7 @@ function inputValidationError($message){
         'status' => 422,
         'message'=> $message,
     ];
-    header("HTTP/1.0 422 unprocessable entity");
+    header("HTTP/1.0 422 Unprocessable Entity");
     echo json_encode($data);
 }
-
 ?>
