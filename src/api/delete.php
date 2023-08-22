@@ -1,4 +1,5 @@
 <?php
+error_reporting(0); 
 include("../index.php"); //include the database connection
 header("Access-Control-Allow-Origin: *");
 header("Content-type: application/json");
@@ -16,7 +17,7 @@ else{
     //print error message
     $data = [
         'status' => 405,
-        'message'=> $requestMethod .'Invalid request method',
+        'message'=> $requestMethod .' Invalid request method',
     ];
     header("HTTP/1.0 405 Method Not Allowed");
     echo json_encode($data);
@@ -34,6 +35,21 @@ function deleteStudent($student_params){
 
     $studentID = mysqli_real_escape_string($conn, $student_params['studentID']);
 
+    // Check if the student ID exists in the database
+    $checkQuery = "SELECT COUNT(*) as count FROM students WHERE studentID = '$studentID'";
+    $checkResult = mysqli_query($conn, $checkQuery);
+    $checkRow = mysqli_fetch_assoc($checkResult);
+
+    if ($checkRow['count'] == 0) {
+        // If the student ID doesn't exist, return an error response
+        $errorData = [
+            'status' => 404, // Not Found
+            'message' => 'No student record found to delete',
+        ];
+        header("HTTP/1.0 404 Not Found");
+        return json_encode($errorData);
+    }
+
     $query = "DELETE FROM students WHERE studentID='$studentID' LIMIT 1";
     //execute this query
     $query_run = mysqli_query($conn, $query);
@@ -41,21 +57,20 @@ function deleteStudent($student_params){
     //check if record exist or not
     if($query_run){
 
-            $data = [
-                'status' => 204,
-                'message'=> 'Student deleted successsfully',
-                //'data' => $response
-            ];
-            header("HTTP/1.0 204 Deleted");
-            return json_encode($data);
+        $errorData = [
+            'status' => 200, //deleted
+            'message' => 'Student record deleted successfully',
+        ];
+        header("HTTP/1.0 200 DELETED");
+        return json_encode($errorData);
 
     }
     else{//no student records found
             $data = [
-                'status' => 404,
-                'message'=> 'No student found for given ID',
+                'status' => 500,
+                'message'=> 'Internal server error',
             ];
-            header("HTTP/1.0 404 No student found for given ID");
+            header("HTTP/1.0 500 Internal server error");
             return json_encode($data);
     }
 }
